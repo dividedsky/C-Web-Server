@@ -52,15 +52,24 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
 {
     const int max_response_size = 262144;
     char response[max_response_size];
+    int length = strlen(body);
 
     // Build HTTP response and store it in response
+    sprintf(response, "HTTP/1.1 200 OK\n"
+        "Content-Type: text/html\n"
+        "Content-Length: %d\n"
+        "Connection: close\n"
+        "\n"
+        "%s\n",
+        length,
+        body);
 
     ///////////////////
     // IMPLEMENT ME! //
     ///////////////////
 
     // Send it all!
-    int rv = send(fd, response, response_length, 0);
+    int rv = send(fd, response, length, 0);
 
     if (rv < 0) {
         perror("send");
@@ -159,6 +168,12 @@ void handle_http_request(int fd, struct cache *cache)
     ///////////////////
 
     // Read the first two components of the first line of the request 
+    char method[16];
+    char path[128];
+    printf("test\n");
+    fscanf(fd, "%s %s", method, path);
+    printf("method: %s\n", method);
+    printf("path: %s\n", path);
  
     // If GET, handle the get endpoints
 
