@@ -52,24 +52,27 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
 {
     const int max_response_size = 262144;
     char response[max_response_size];
-    int length = strlen(body);
 
     // Build HTTP response and store it in response
-    sprintf(response, "HTTP/1.1 200 OK\n"
-        "Content-Type: text/html\n"
+    sprintf(response, "HTTP/1.1 %s\n"
+        "Content-Type: %s\n"
         "Content-Length: %d\n"
         "Connection: close\n"
         "\n"
         "%s\n",
-        length,
+        header,
+        content_type,
+        content_length,
         body);
 
     ///////////////////
     // IMPLEMENT ME! //
     ///////////////////
+    printf("response: \n%s\n", response);
+    int response_length = strlen(response);
 
     // Send it all!
-    int rv = send(fd, response, length, 0);
+    int rv = send(fd, response, response_length, 0);
 
     if (rv < 0) {
         perror("send");
@@ -85,12 +88,17 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
 void get_d20(int fd)
 {
     // Generate a random number between 1 and 20 inclusive
+  int rnd = rand() % 20 + 1;
+  char body[128];
+  sprintf(body, "%d\n", rnd);
+  printf("strlen: %d\n", strlen(body));
     
     ///////////////////
     // IMPLEMENT ME! //
     ///////////////////
 
     // Use send_response() to send it back as text/plain data
+  send_response(fd, "200 OK", "text/plain", body, strlen(body));
 
     ///////////////////
     // IMPLEMENT ME! //
@@ -171,14 +179,15 @@ void handle_http_request(int fd, struct cache *cache)
     char method[16];
     char path[128];
     sscanf(request, "%s %s", method, path);
-    printf("method: %s\n", method);
-    printf("path: %s\n", path);
+    /* printf("method: %s\n", method); */
+    /* printf("path: %s\n", path); */
  
     // If GET, handle the get endpoints
     if (strcmp(method, "GET") == 0) {
     //    Check if it's /d20 and handle that special case
       if (strcmp(path, "/d20") == 0) {
         printf("d20\n");
+        get_d20(fd);
       } else {
     //    Otherwise serve the requested file by calling get_file()
         printf("not d20\n");
