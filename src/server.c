@@ -171,7 +171,8 @@ void handle_http_request(int fd, struct cache *cache)
     char method[16];
     char path[128];
     printf("test\n");
-    fscanf(fd, "%s %s", method, path);
+    printf("br: %d\n", bytes_recvd);
+    fscanf(bytes_recvd, "%s %s", method, path);
     printf("method: %s\n", method);
     printf("path: %s\n", path);
  
