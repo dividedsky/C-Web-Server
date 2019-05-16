@@ -29,7 +29,7 @@ void free_entry(struct cache_entry *entry)
     ///////////////////
   free(entry->path);
   free(entry->content_type);
-
+  free(entry);
 }
 
 /**
@@ -102,7 +102,7 @@ struct cache *cache_create(int max_size, int hashsize)
     ///////////////////
     // IMPLEMENT ME! //
     ///////////////////
-  struct cache *cache = malloc(sizeof(struct cache));
+  struct cache *cache = malloc(sizeof(*cache));
   cache->index = hashtable_create(hashsize, NULL); // pass NULL to use default hash function
   cache->head = NULL;
   cache->tail = NULL;
@@ -146,7 +146,7 @@ void cache_put(struct cache *cache, char *path, char *content_type, void *conten
   dllist_insert_head(cache, ce);
 
   // store entry in hash table, indexed by path
-  hashtable_put(cache->index, path, content);
+  hashtable_put(cache->index, path, ce);
 
   // increment cache size
   cache->cur_size++;
@@ -154,15 +154,14 @@ void cache_put(struct cache *cache, char *path, char *content_type, void *conten
   // check if size is greater than max size
   if (cache->cur_size > cache->max_size) {
     // pointer copy to the tail
-    struct cache_entry *oldtail = cache->tail;
+    struct cache_entry *oldtail = dllist_remove_tail(cache);
     // remove the tail
-    dllist_remove_tail(cache);
     // remove from hash table
     hashtable_delete(cache->index, oldtail->path);
     // free old tail
     free_entry(oldtail);
-    // update cache size
-    cache->cur_size--;
+    // update cache size--NOT necessary because free_entry does this
+    /* cache->cur_size--; */
   }
 }
 
@@ -183,7 +182,7 @@ struct cache_entry *cache_get(struct cache *cache, char *path)
   }
 
   // move entry to head
-  dllist_move_to_head(cache->index, ce);
+  dllist_move_to_head(cache, ce);
 
   // return entry pointer
   return ce;

@@ -145,17 +145,31 @@ void get_file(int fd, struct cache *cache, char *request_path)
   char filepath[4096];
 
   snprintf(filepath, sizeof filepath, "%s%s", SERVER_ROOT, request_path);
-  filedata = file_load(filepath);
+  // check cache for file
+  struct cache_entry *ce = cache_get(cache, filepath);
 
+  // if file is in cache, send it
+  if (ce) {
+    send_response(fd, "200 OK", ce->content_type, ce->content, ce->content_length);
+  }
+
+  // otherwise, load file from disk
+  filedata = file_load(filepath);
   // if file not found, serve up the 404
   if (filedata == NULL) {
     resp_404(fd);
   } else {
-    // else return page
     char *mime_type = mime_type_get(filepath);
+    // put it in the cache
+    cache_put(cache, filepath, mime_type, filedata->data, filedata->size);
+
+    // return page
     send_response(fd, "200 OK", mime_type, filedata->data, filedata->size);
     file_free(filedata);
   }
+
+  // send it
+
 }
 
 /**
