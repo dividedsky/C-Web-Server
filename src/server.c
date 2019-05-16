@@ -154,6 +154,7 @@ void get_file(int fd, struct cache *cache, char *request_path)
     // else return page
     char *mime_type = mime_type_get(filepath);
     send_response(fd, "200 OK", mime_type, filedata->data, filedata->size);
+    file_free(filedata);
   }
 }
 

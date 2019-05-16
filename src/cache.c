@@ -12,6 +12,11 @@ struct cache_entry *alloc_entry(char *path, char *content_type, void *content, i
     ///////////////////
     // IMPLEMENT ME! //
     ///////////////////
+  struct cache_entry *ce = malloc(sizeof(struct cache_entry));
+  ce->path = path;
+  ce->content_type = content_type;
+  ce->content_length = content_length;
+  ce->content = content;
 }
 
 /**
@@ -125,6 +130,31 @@ void cache_put(struct cache *cache, char *path, char *content_type, void *conten
     ///////////////////
     // IMPLEMENT ME! //
     ///////////////////
+  // allocate new cache entry
+  struct cache_entry *ce = alloc_entry(path, content_type, content, content_length);
+
+  // insert entry at head of LL
+  dllist_insert_head(cache, ce);
+
+  // store entry in hash table, indexed by path
+  hashtable_put(cache->index, path, content);
+
+  // increment cache size
+  cache->cur_size++;
+
+  // check if size is greater than max size
+  if (cache->cur_size > cache->max_size) {
+    // pointer copy to the tail
+    struct cache_entry *oldtail = cache->tail;
+    // remove the tail
+    dllist_remove_tail(cache);
+    // remove from hash table
+    hashtable_delete(cache->index, oldtail->path);
+    // free old tail
+    free_entry(oldtail);
+    // update cache size
+    cache->cur_size--;
+  }
 }
 
 /**
