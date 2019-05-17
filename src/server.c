@@ -53,11 +53,32 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
     const int max_response_size = 262144;
     char response[max_response_size];
 
+    time_t t = time(NULL);
+    struct tm *tm = localtime(&t);
+    char *timestamp = asctime(tm);
+    printf("timestamp: %s", timestamp);
+
     // Build HTTP response and store it in response
+    int response_length = sprintf(response, "HTTP/1.1 %s\n"
+        "Content-Type: %s\n"
+        "Content-Length: %d\n"
+        "Connection: close\n"
+        "Date: %s"
+        "\n",
+        header,
+        content_type,
+        content_length,
+        timestamp
+        );
+
+    memcpy(response + response_length, body, content_length);
+    response_length += content_length;
 
     ///////////////////
     // IMPLEMENT ME! //
     ///////////////////
+    printf("response: \n%s\n", response);
+    printf("length: %d\n", response_length);
 
     // Send it all!
     int rv = send(fd, response, response_length, 0);
@@ -75,17 +96,14 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
  */
 void get_d20(int fd)
 {
-    // Generate a random number between 1 and 20 inclusive
+  // Generate a random number between 1 and 20 inclusive
+  int rnd = rand() % 20 + 1;
+  char body[128];
+  sprintf(body, "%d\n", rnd);
+  printf("strlen: %d\n", strlen(body));
     
-    ///////////////////
-    // IMPLEMENT ME! //
-    ///////////////////
-
-    // Use send_response() to send it back as text/plain data
-
-    ///////////////////
-    // IMPLEMENT ME! //
-    ///////////////////
+  // Use send_response() to send it back as text/plain data
+  send_response(fd, "200 OK", "text/plain", body, strlen(body));
 }
 
 /**
@@ -109,7 +127,7 @@ void resp_404(int fd)
 
     mime_type = mime_type_get(filepath);
 
-    send_response(fd, "HTTP/1.1 404 NOT FOUND", mime_type, filedata->data, filedata->size);
+    send_response(fd, "404 NOT FOUND", mime_type, filedata->data, filedata->size);
 
     file_free(filedata);
 }
@@ -122,6 +140,36 @@ void get_file(int fd, struct cache *cache, char *request_path)
     ///////////////////
     // IMPLEMENT ME! //
     ///////////////////
+  // find file
+  struct file_data *filedata;
+  char filepath[4096];
+
+  snprintf(filepath, sizeof filepath, "%s%s", SERVER_ROOT, request_path);
+  // check cache for file
+  struct cache_entry *ce = cache_get(cache, filepath);
+
+  // if file is in cache, send it
+  if (ce) {
+    send_response(fd, "200 OK", ce->content_type, ce->content, ce->content_length);
+  }
+
+  // otherwise, load file from disk
+  filedata = file_load(filepath);
+  // if file not found, serve up the 404
+  if (filedata == NULL) {
+    resp_404(fd);
+  } else {
+    char *mime_type = mime_type_get(filepath);
+    // put it in the cache
+    cache_put(cache, filepath, mime_type, filedata->data, filedata->size);
+
+    // return page
+    send_response(fd, "200 OK", mime_type, filedata->data, filedata->size);
+    file_free(filedata);
+  }
+
+  // send it
+
 }
 
 /**
@@ -159,11 +207,24 @@ void handle_http_request(int fd, struct cache *cache)
     ///////////////////
 
     // Read the first two components of the first line of the request 
+    char method[16];
+    char path[128];
+    sscanf(request, "%s %s", method, path);
+    /* printf("method: %s\n", method); */
+    /* printf("path: %s\n", path); */
  
     // If GET, handle the get endpoints
-
+    if (strcmp(method, "GET") == 0) {
     //    Check if it's /d20 and handle that special case
+      if (strcmp(path, "/d20") == 0) {
+        printf("d20\n");
+        get_d20(fd);
+      } else {
     //    Otherwise serve the requested file by calling get_file()
+        printf("not d20\n");
+        get_file(fd, cache, path);
+      }
+    }
 
 
     // (Stretch) If POST, handle the post request
